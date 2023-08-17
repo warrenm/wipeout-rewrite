@@ -15,11 +15,16 @@ else
 endif
 
 
-# Rendeder ---------------------------------------------------------------------
+# Renderer ---------------------------------------------------------------------
+
+SHADER_SRC = src/shaders.metal
 
 ifeq ($(RENDERER), GL)
 	RENDERER_SRC = src/render_gl.c
 	C_FLAGS := $(C_FLAGS) -DRENDERER_GL
+else ifeq ($(RENDERER), METAL)
+	RENDERER_SRC = src/render_metal.c
+	C_FLAGS := $(C_FLAGS) -DRENDERER_METAL
 else ifeq ($(RENDERER), SOFTWARE)
 	RENDERER_SRC = src/render_software.c
 	C_FLAGS := $(C_FLAGS) -DRENDERER_SOFTWARE
@@ -41,6 +46,10 @@ ifeq ($(UNAME_S), Darwin)
 
 	ifeq ($(RENDERER), GL)
 		L_FLAGS := $(L_FLAGS) -lGLEW -GLU -framework OpenGL
+	endif
+
+	ifeq ($(RENDERER), METAL)
+		L_FLAGS := $(L_FLAGS) -framework Metal
 	endif
 
 	L_FLAGS_SDL = -lSDL2
@@ -121,6 +130,11 @@ COMMON_SRC = \
 # Targets native ---------------------------------------------------------------
 
 COMMON_OBJ = $(patsubst %.c, $(BUILD_DIR)/%.o, $(COMMON_SRC))
+
+metallib:
+	xcrun -sdk macosx metal -c $(SHADER_SRC) -o default.air
+	xcrun -sdk macosx metallib default.air -o default.metallib
+	rm default.air
 
 sdl: $(BUILD_DIR)/src/platform_sdl.o
 sdl: $(COMMON_OBJ)

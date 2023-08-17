@@ -244,6 +244,43 @@ void platform_set_audio_mix_cb(void (*cb)(float *buffer, uint32_t len)) {
 	}
 
 
+#elif defined(RENDERER_METAL) // ----------------------------------------------
+    #define PLATFORM_WINDOW_FLAGS 0
+    static SDL_MetalView *metal_view;
+    static SDL_Renderer *renderer;
+    static void *metal_layer;
+
+    void platform_video_init() {
+        metal_view = SDL_Metal_CreateView(window);
+        metal_layer = SDL_Metal_GetLayer(metal_view);
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    }
+
+    void platform_video_cleanup() {
+        SDL_Metal_DestroyView(metal_view);
+        metal_view = NULL;
+        metal_layer = NULL;
+        SDL_DestroyRenderer(renderer);
+        renderer = NULL;
+    }
+
+    void platform_prepare_frame() {
+    }
+
+    void platform_end_frame() {
+    }
+
+    vec2i_t platform_screen_size() {
+        int width, height;
+        SDL_Metal_GetDrawableSize(window, &width, &height);
+        vec2i_t screen_size = vec2i(width, height);
+        return screen_size;
+    }
+
+    void *platform_get_metal_layer() {
+        return metal_layer;
+    }
+
 #elif defined(RENDERER_SOFTWARE) // ----------------------------------------------
 	#define PLATFORM_WINDOW_FLAGS 0
 	static SDL_Renderer *renderer;
@@ -327,10 +364,16 @@ int main(int argc, char *argv[]) {
 	system_init();
 
 	while (!wants_to_exit) {
+#if __OBJC__
+    @autoreleasepool {
+#endif
 		platform_pump_events();
 		platform_prepare_frame();
 		system_update();
 		platform_end_frame();
+#if __OBJC__
+	}
+#endif
 	}
 
 	system_cleanup();
