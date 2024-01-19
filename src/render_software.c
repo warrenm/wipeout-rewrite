@@ -43,7 +43,7 @@ void render_init(vec2i_t screen_size) {
 	RENDER_NO_TEXTURE = render_texture_create(2, 2, white_pixels);
 }
 
-void render_cleanup() {}
+void render_cleanup(void) {}
 
 void render_set_screen_size(vec2i_t size) {
 	screen_size = size;
@@ -63,12 +63,12 @@ void render_set_screen_size(vec2i_t size) {
 void render_set_resolution(render_resolution_t res) {}
 void render_set_post_effect(render_post_effect_t post) {}
 
-vec2i_t render_size() {
+vec2i_t render_size(void) {
 	return screen_size;
 }
 
 
-void render_frame_prepare() {
+void render_frame_prepare(void) {
 	screen_buffer = platform_get_screenbuffer(&screen_pitch);
 	screen_ppr = screen_pitch / sizeof(rgba_t);
 
@@ -80,7 +80,7 @@ void render_frame_prepare() {
 	}
 }
 
-void render_frame_end() {}
+void render_frame_end(void) {}
 
 void render_set_view(vec3_t pos, vec3_t angles) {
 	view_mat = mat4_identity();
@@ -92,7 +92,7 @@ void render_set_view(vec3_t pos, vec3_t angles) {
 	render_set_model_mat(&mat4_identity());
 }
 
-void render_set_view_2d() {
+void render_set_view_2d(void) {
 	float near = -1;
 	float far = 1;
 	float left = 0;
@@ -143,10 +143,10 @@ void render_push_tris(tris_t tris, uint16_t texture_index) {
 	vec2i_t sc2 = vec2i(p2.x * w2 + w2, h2 - p2.y * h2);
 
 	rgba_t color = tris.vertices[0].color;
-	color.as_rgba.r = min(color.as_rgba.r * 2, 255);
-	color.as_rgba.g = min(color.as_rgba.g * 2, 255);
-	color.as_rgba.b = min(color.as_rgba.b * 2, 255);
-	color.as_rgba.a = clamp(color.as_rgba.a * (1.0-p0.z) * FAR_PLANE * (2.0/255.0), 0, 255);
+	color.r = min(color.r * 2, 255);
+	color.g = min(color.g * 2, 255);
+	color.b = min(color.b * 2, 255);
+	color.a = clamp(color.a * (1.0-p0.z) * FAR_PLANE * (2.0/255.0), 0, 255);
 
 	line(sc0, sc1, color);
 	line(sc1, sc2, color);
@@ -227,7 +227,7 @@ void render_texture_replace_pixels(int16_t texture_index, rgba_t *pixels) {
 	// memcpy(t->pixels, pixels, t->size.x * t->size.y * sizeof(rgba_t));
 }
 
-uint16_t render_textures_len() {
+uint16_t render_textures_len(void) {
 	return textures_len;
 }
 
@@ -244,9 +244,9 @@ void render_textures_dump(const char *path) {}
 
 static inline rgba_t color_mix(rgba_t in, rgba_t out) {
 	return rgba(
-		lerp(in.as_rgba.r, out.as_rgba.r, out.as_rgba.a/255.0),
-		lerp(in.as_rgba.g, out.as_rgba.g, out.as_rgba.a/255.0),
-		lerp(in.as_rgba.b, out.as_rgba.b, out.as_rgba.a/255.0),
+		lerp(in.r, out.r, out.a/255.0),
+		lerp(in.g, out.g, out.a/255.0),
+		lerp(in.b, out.b, out.a/255.0),
 		1
 	);
 }

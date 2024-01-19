@@ -4,9 +4,10 @@ UNAME_S := $(shell uname -s)
 RENDERER ?= GL
 USE_GLX ?= false
 DEBUG ?= false
+USER_CFLAGS ?=
 
-L_FLAGS ?= -lm -rdynamic
-C_FLAGS ?= -std=gnu99 -Wall -Wno-unused-variable
+L_FLAGS ?= -lm
+C_FLAGS ?= -Isrc/libs/ -std=gnu99 -Wall -Wno-unused-variable $(USER_CFLAGS)
 
 ifeq ($(DEBUG), true)
 	C_FLAGS := $(C_FLAGS) -g
@@ -41,8 +42,9 @@ endif
 # macOS ------------------------------------------------------------------------
 
 ifeq ($(UNAME_S), Darwin)
+	BREW_HOME := $(shell brew --prefix)
 	C_FLAGS := $(C_FLAGS) -x objective-c -I/opt/homebrew/include -D_THREAD_SAFE -w
-	L_FLAGS := $(L_FLAGS) -L/opt/homebrew/lib -framework Foundation
+	L_FLAGS := $(L_FLAGS) -L$(BREW_HOME)/lib -framework Foundation
 
 	ifeq ($(RENDERER), GL)
 		L_FLAGS := $(L_FLAGS) -lGLEW -GLU -framework OpenGL
@@ -74,12 +76,20 @@ else ifeq ($(UNAME_S), Linux)
 	L_FLAGS_SOKOL = -lX11 -lXcursor -pthread -lXi -ldl -lasound
 
 
-# Windows ----------------------------------------------------------------------
+# Windows MSYS ------------------------------------------------------------------
+else ifeq ($(shell uname -o), Msys)
+	ifeq ($(RENDERER), GL)
+		L_FLAGS := $(L_FLAGS) -lglew32 -lopengl32
+	endif
 
+	C_FLAGS := $(C_FLAGS) -DSDL_MAIN_HANDLED -D__MSYS__
+	L_FLAGS_SDL = -lSDL2 -lSDL2main
+	L_FLAGS_SOKOL = --pthread -ldl -lasound
+
+
+# Windows NON-MSYS ---------------------------------------------------------------
 else ifeq ($(OS), Windows_NT)
-$(error TODO: FLAGS for windows have not been set up. Please modify this makefile and send a PR!)
-
-
+	$(error TODO: FLAGS for windows have not been set up. Please modify this makefile and send a PR!)
 
 else
 $(error Unknown environment)
@@ -130,6 +140,7 @@ COMMON_SRC = \
 # Targets native ---------------------------------------------------------------
 
 COMMON_OBJ = $(patsubst %.c, $(BUILD_DIR)/%.o, $(COMMON_SRC))
+COMMON_DEPS = $(patsubst %.c, $(BUILD_DIR)/%.d, $(COMMON_SRC))
 
 metallib:
 	xcrun -sdk macosx metal -c $(SHADER_SRC) -o default.air
@@ -149,12 +160,16 @@ $(BUILD_DIR):
 
 $(BUILD_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
-	$(CC) $(C_FLAGS) -c $< -o $@
+	$(CC) $(C_FLAGS) -MMD -MP -c $< -o $@
+
+-include $(COMMON_DEPS)
 
 
 # Targets wasm -----------------------------------------------------------------
 
 COMMON_OBJ_WASM = $(patsubst %.c, $(BUILD_DIR_WASM)/%.o, $(COMMON_SRC))
+COMMON_DEPS_WASM = $(patsubst %.c, $(BUILD_DIR_WASM)/%.d, $(COMMON_SRC))
+
 wasm: wasm_full wasm_minimal
 	cp src/wasm-index.html $(WASM_RELEASE_DIR)/game.html
 
@@ -176,15 +191,15 @@ wasm_minimal: $(COMMON_OBJ_WASM)
 		--preload-file wipeout \
 		--exclude-file wipeout/music \
 		--exclude-file wipeout/intro.mpeg
-	
+
 $(BUILD_DIR_WASM):
 	mkdir -p $(BUILD_DIR_WASM)
 
 $(BUILD_DIR_WASM)/%.o: %.c
 	mkdir -p $(dir $@)
-	$(EMCC) $(C_FLAGS) -c $< -o $@
+	$(EMCC) $(C_FLAGS) -MMD -MP -c $< -o $@
 
-
+-include $(COMMON_DEPS_WASM)
 
 
 
